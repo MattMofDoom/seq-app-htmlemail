@@ -15,18 +15,20 @@ namespace Seq.App.EmailPlus
 {
     using Template = HandlebarsTemplate<object, object>;
 
-    [SeqApp("Email+",
-        Description = "Uses a Handlebars template to send events as SMTP email.")]
+    [SeqApp("HTML Email",
+        Description = "Uses Handlebars templates to format events and notifications into HTML email.")]
     public class EmailApp : SeqApp, ISubscribeToAsync<LogEventData>
     {
         readonly IMailGateway _mailGateway;
         readonly IClock _clock;
         readonly Dictionary<uint, DateTime> _suppressions = new Dictionary<uint, DateTime>();
         readonly Lazy<Template> _bodyTemplate, _subjectTemplate, _toAddressesTemplate;
-        readonly SmtpOptions _options;
+        readonly Lazy<SmtpOptions> _options;
 
         const string DefaultSubjectTemplate = @"[{{$Level}}] {{{$Message}}} (via Seq)";
         const int MaxSubjectLength = 130;
+        const int DefaultPort = 25;
+        const int DefaultSslPort = 465;
 
         static EmailApp()
         {
@@ -38,19 +40,15 @@ namespace Seq.App.EmailPlus
             _mailGateway = mailGateway ?? throw new ArgumentNullException(nameof(mailGateway));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
 
-            // ReSharper disable ExpressionIsAlwaysNull ConditionIsAlwaysTrueOrFalse
-            _options = _options = new SmtpOptions
-            {
-                Server = Host,
-                Port = Port ?? 25,
-                SocketOptions = EnableSsl ?? false
-                    ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTlsWhenAvailable,
-                Username = Username,
-                Password = Password,
-                RequiresAuthentication = !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password)
-            };
-            // ReSharper restore ExpressionIsAlwaysNull ConditionIsAlwaysTrueOrFalse
+            var port = Port ?? DefaultPort;
+            _options = _options = new Lazy<SmtpOptions>(() => new SmtpOptions(
+                Host,
+                port, 
+                EnableSsl ?? false
+                    ? RequireSslForPort(port)
+                    : SecureSocketOptions.StartTlsWhenAvailable, 
+                Username,
+                Password));
             
             _subjectTemplate = new Lazy<Template>(() =>
             {
@@ -75,6 +73,11 @@ namespace Seq.App.EmailPlus
                     return (_, __) => To;
                 return Handlebars.Compile(toAddressTemplate);
             });
+        }
+
+        internal static SecureSocketOptions RequireSslForPort(int port)
+        {
+            return (port == DefaultSslPort ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls);
         }
 
         public EmailApp()
@@ -109,16 +112,18 @@ namespace Seq.App.EmailPlus
 
         [SeqAppSetting(
             IsOptional = true,
-            DisplayName = "Enable SSL",
-            HelpText = "Check this box if SSL is required to send email messages.")]
+            DisplayName = "Require TLS",
+            HelpText = "Check this box to require that the server supports SSL/TLS for sending messages. If the port used is 465," +
+                       "implicit SSL will be enabled; otherwise, the STARTTLS extension will be used.")]
         public bool? EnableSsl { get; set; }
 
         [SeqAppSetting(
             IsOptional = true,
             InputType = SettingInputType.LongText,
             DisplayName = "Body template",
-            HelpText = "The template to use when generating the email body, using Handlebars.NET syntax. Leave this blank to use " +
-                       "the default template that includes the message and properties (https://github.com/datalust/seq-apps/tree/master/src/Seq.App.EmailPlus/Resources/DefaultBodyTemplate.html).")]
+            HelpText = "The template to use when generating the email body, using Handlebars syntax. Leave this blank to use " +
+                       "the default template that includes the message and " +
+                       "properties (https://github.com/datalust/seq-app-htmlemail/blob/main/src/Seq.App.EmailPlus/Resources/DefaultBodyTemplate.html).")]
         public string BodyTemplate { get; set; }
 
         [SeqAppSetting(
@@ -142,7 +147,15 @@ namespace Seq.App.EmailPlus
         {
             if (ShouldSuppress(evt)) return;
 
-            var to = FormatTemplate(_toAddressesTemplate.Value, evt, base.Host);
+            var to = FormatTemplate(_toAddressesTemplate.Value, evt, base.Host)
+                .Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
+
+            if (to.Length == 0)
+            {
+                Log.Warning("Email 'to' address template did not evaluate to one or more recipient addresses");
+                return;
+            }
+
             var body = FormatTemplate(_bodyTemplate.Value, evt, base.Host);
             var subject = FormatTemplate(_subjectTemplate.Value, evt, base.Host).Trim().Replace("\r", "")
                 .Replace("\n", "");
@@ -150,10 +163,10 @@ namespace Seq.App.EmailPlus
                 subject = subject.Substring(0, MaxSubjectLength);
 
             await _mailGateway.SendAsync(
-                _options,
+                _options.Value,
                 new MimeMessage(
-                    new List<InternetAddress> {MailboxAddress.Parse(From)},
-                    new List<InternetAddress> {MailboxAddress.Parse(to)},
+                    new[] {MailboxAddress.Parse(From)},
+                    to.Select(MailboxAddress.Parse),
                     subject,
                     new BodyBuilder {HtmlBody = body}.ToMessageBody()));
         }
