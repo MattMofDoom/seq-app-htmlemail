@@ -3,8 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <VersionPrefix>3.1.0</VersionPrefix>
-    <Description>Send HTML email from Seq in response to application log events and alerts. Supports Handlebars template syntax. Requires Seq 5.1+, for earlier Seq versions
-    use the 2.x series of releases of this package.</Description>
+    <Description>A fork of Seq.App.EmailPlus that incorporates delivery enhancements such as multiple mailhosts and DNS delivery, envelope enhancements (such as ReplyTo/CC/BCC) and added logging for diagnostic and traceability.</Description>
     <Authors>Datalust and Contributors</Authors>
     <PackageTags>seq-app</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
@@ -14,8 +13,11 @@
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <TreatSpecificWarningsAsErrors />
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageId>Seq.App.EmailPlus</PackageId>
-    <!--<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>-->
+    <PackageId>Seq.App.EmailPlus-Enhanced</PackageId>
+    <PackageReleaseNotes>* Incorporates enhancements for delivery, envelopes (including cc/bcc/replyto), and added logging</PackageReleaseNotes>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Product>Seq.App.EmailPlus-Enhanced</Product>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,8 +32,8 @@
   <ItemGroup>
     <None Include="./icon.png" Pack="true" Visible="false" PackagePath="" />
     <None Include="../../LICENSE" Pack="true" PackagePath="" />
-    <None Include="./obj/publish/**/*" Exclude="./obj/publish/Seq.App.EmailPlus.dll;./obj/publish/Seq.Apps.dll;./obj/publish/Serilog.dll" Pack="true" PackagePath="lib/$(TargetFramework)" />
-    <!--<None Include="$(OutDir)/**/*;" Exclude="$(OutDir)/$(MSBuildProjectName).dll;$(OutDir)/Seq.Apps.dll;$(OutDir)/Serilog.dll" Pack="true" PackagePath="lib/$(TargetFramework)" />-->
+    <!--<None Include="./obj/publish/**/*" Exclude="./obj/publish/Seq.App.EmailPlus.dll;./obj/publish/Seq.Apps.dll;./obj/publish/Serilog.dll" Pack="true" PackagePath="lib/$(TargetFramework)" />-->
+    <None Include="$(OutDir)/**/*.dll;" Exclude="$(OutDir)/$(MSBuildProjectName).dll;$(OutDir)/Seq.Apps.dll;$(OutDir)/Serilog.dll" Pack="true" PackagePath="lib/$(TargetFramework)" />
   </ItemGroup>
 
 </Project>
