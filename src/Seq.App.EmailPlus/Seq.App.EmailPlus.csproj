@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <VersionPrefix>3.1.1</VersionPrefix>
+    <VersionPrefix>3.1.2</VersionPrefix>
     <Description>A fork of Seq.App.EmailPlus that incorporates delivery enhancements such as multiple mailhosts and DNS delivery, envelope enhancements (such as ReplyTo/CC/BCC) and added logging for diagnostic and traceability.</Description>
     <Authors>Datalust and Contributors</Authors>
     <PackageTags>seq-app</PackageTags>
@@ -18,6 +18,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Product>Seq.App.EmailPlus-Enhanced</Product>
+    <Version>3.1.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
